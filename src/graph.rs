@@ -93,9 +93,37 @@ impl UiGraph {
             } else {
                 PromptBuilder::fix(&self.workload, &page, &agent_ctx, &findings)?
             };
-            let agent = self
+            let agent = match self
                 .agent
-                .run(&prompt, &agent_ctx, &page, &self.workspace)?;
+                .run(&prompt, &agent_ctx, &page, &self.workspace)
+            {
+                Ok(agent) => agent,
+                Err(error) => {
+                    let gate = GateResult::fail(
+                        "agent",
+                        vec![
+                            Finding::error("agent", "implementation agent could not be started")
+                                .with_detail(format!("{error:#}")),
+                        ],
+                    );
+                    self.state.pages.insert(
+                        page.name.clone(),
+                        PageRun {
+                            name: page.name.clone(),
+                            status: Status::Failed,
+                            attempt,
+                            gates: vec![source.clone(), gate],
+                            changed_files: self.workspace.working_files(&self.target_dir)?,
+                        },
+                    );
+                    self.state.event(
+                        "agent",
+                        format!("{} attempt {attempt} could not start", page.name),
+                    );
+                    self.checkpoint()?;
+                    return Ok(false);
+                }
+            };
             if !agent.ok() {
                 let gate = GateResult::fail_output(
                     "agent",
