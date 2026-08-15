@@ -1,17 +1,12 @@
-mod agent;
-mod config;
-mod graph;
-mod repo;
-mod state;
-mod verifier;
-
-use agent::AgentRunner;
 use anyhow::{Context, Result, bail};
+use burncloud_graphs::{
+    agent::AgentRunner,
+    config::Workload,
+    graph::UiGraph,
+    repo::RepoWorkspace,
+    state::{GraphState, Status},
+};
 use clap::{Parser, Subcommand};
-use config::Workload;
-use graph::UiGraph;
-use repo::RepoWorkspace;
-use state::{GraphState, Status};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
