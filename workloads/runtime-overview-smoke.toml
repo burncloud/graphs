@@ -1,0 +1,49 @@
+[workload]
+name = "runtime smoke: rustburn/burncloud-ui Overview -> burncloud/burncloud"
+max_attempts = 3
+
+[source]
+url = "https://github.com/rustburn/burncloud-ui.git"
+ref = "main"
+
+[target]
+url = "https://github.com/burncloud/burncloud.git"
+ref = "main"
+
+[agent]
+command = []
+timeout_seconds = 1800
+
+[contracts]
+visual = "contracts/visual-language.md"
+truth = "contracts/data-truth.md"
+
+[verify]
+page_commands = [
+  "cargo fmt -p burncloud-client -- --check",
+  "cargo check -p burncloud-client --no-default-features --features web"
+]
+cross_page_commands = [
+  "bash crates/client/scripts/check-functional-wiring.sh",
+  "bash crates/client/scripts/check-product-ux.sh"
+]
+final_commands = [
+  "cargo fmt -p burncloud-client -- --check",
+  "cargo check -p burncloud-client --no-default-features --features web"
+]
+truth_forbidden_claims = [
+  "Pristine silicon attestation active",
+  "SECURE TPM",
+  "SIGNED BY ROOT",
+  "INSANELY GREAT"
+]
+
+[[pages]]
+name = "overview"
+source = "src/pages/Overview.tsx"
+question = "What is the overall state of BurnCloud right now?"
+target_search = ["overview", "dashboard", "functional_layout", "pages.rs"]
+required = ["Overview"]
+forbidden = ["Steve's Critique", "Cryptographic Scan", "100% Traceability", "Pristine silicon"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+notes = "Runtime proof workload. Keep the refined reference styling, remove simulated trust features, preserve UNKNOWN/error semantics, and keep Overview as a cross-domain summary rather than a management surface."
