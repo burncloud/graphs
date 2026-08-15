@@ -1,0 +1,81 @@
+name: Graph Runtime Overview
+
+on:
+  push:
+    branches:
+      - 'agent/ui-graph-harness'
+  workflow_dispatch:
+
+jobs:
+  overview-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout graphs
+        uses: actions/checkout@v4
+        with:
+          path: graphs
+
+      - name: Checkout React reference
+        uses: actions/checkout@v4
+        with:
+          repository: rustburn/burncloud-ui
+          ref: main
+          path: source
+
+      - name: Checkout BurnCloud target
+        uses: actions/checkout@v4
+        with:
+          repository: burncloud/burncloud
+          ref: main
+          path: target
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: target
+
+      - name: Install graph runtime
+        working-directory: graphs
+        run: python -m pip install -e .
+
+      - name: Execute UIGraph.run for Overview
+        working-directory: graphs
+        env:
+          BURNCLOUD_GRAPHS_AGENT: bash ${{ github.workspace }}/graphs/scripts/patch_agent.sh
+          BURNCLOUD_GRAPHS_PATCH_URL: https://github.com/burncloud/burncloud/pull/423.diff
+        run: |
+          burncloud-graphs run workloads/burncloud-ui-to-burncloud.toml \
+            --source-dir "${{ github.workspace }}/source" \
+            --target-dir "${{ github.workspace }}/target" \
+            --workspace "${{ github.workspace }}/graph-runtime" \
+            --page overview \
+            --no-branch
+
+      - name: Show machine-readable graph state
+        if: always()
+        run: |
+          find "${{ github.workspace }}/graph-runtime/runs" -name state.json -print -exec cat {} \;
+
+      - name: Show graph-produced target commit
+        if: success()
+        working-directory: target
+        run: |
+          git log -1 --format='graph_commit=%H%nsubject=%s%nauthor=%an <%ae>'
+          git show --stat --oneline HEAD
+
+      - name: Upload graph execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: overview-graph-runtime-evidence
+          path: |
+            graph-runtime/runs/**/state.json
+          if-no-files-found: error
