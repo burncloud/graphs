@@ -52,3 +52,7 @@ $env:BURNCLOUD_GRAPHS_AGENT='codex exec --sandbox workspace-write -C {target_dir
 ```
 
 Every run writes machine-readable evidence under `<workspace>/runs/<run-id>/state.json`.
+
+## Runtime model
+
+The executable owns the definition of done. Coding agents only modify the target worktree. Each page passes through built-in source/scope/product/truth/visual gates and configured platform-neutral command gates. Failed findings are fed back to the agent for a bounded retry loop. A page is staged only after every page gate passes, and a final commit is created only after cross-page and final checks pass.
