@@ -3,7 +3,7 @@ use crate::{
     repo::{CommandResult, RepoWorkspace},
     state::Finding,
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -75,9 +75,9 @@ EXECUTION RULES
 "#,
             workload = workload.name,
             page = page.name,
-            source = ctx.source_dir.display(),
-            source_page = ctx.source_dir.join(&page.source).display(),
-            target = ctx.target_dir.display(),
+            source = external_path(&ctx.source_dir),
+            source_page = external_path(&ctx.source_dir.join(&page.source)),
+            target = external_path(&ctx.target_dir),
             question = page.question,
             hints = bullets(&page.target_search),
             required = bullets(&page.required),
@@ -138,9 +138,7 @@ pub struct AgentRunner {
 impl AgentRunner {
     pub fn new(spec: &AgentSpec) -> Result<Self> {
         let command = match env::var("BURNCLOUD_GRAPHS_AGENT") {
-            Ok(value) if !value.trim().is_empty() => {
-                shell_words::split(&value).context("invalid BURNCLOUD_GRAPHS_AGENT")?
-            }
+            Ok(value) if !value.trim().is_empty() => parse_agent_command(&value)?,
             _ => spec.command.clone(),
         };
         Ok(Self {
@@ -164,8 +162,8 @@ impl AgentRunner {
             .command
             .split_first()
             .context("implementation agent is not configured")?;
-        let source = ctx.source_dir.display().to_string();
-        let target = ctx.target_dir.display().to_string();
+        let source = external_path(&ctx.source_dir);
+        let target = external_path(&ctx.target_dir);
         let args = raw_args
             .iter()
             .map(|arg| {
@@ -175,5 +173,75 @@ impl AgentRunner {
             })
             .collect::<Vec<_>>();
         workspace.run_argv(Path::new(&ctx.target_dir), program, &args, Some(prompt))
+    }
+}
+
+fn parse_agent_command(value: &str) -> Result<Vec<String>> {
+    #[cfg(windows)]
+    {
+        parse_windows_command_line(value)
+    }
+    #[cfg(not(windows))]
+    {
+        shell_words::split(value).context("invalid BURNCLOUD_GRAPHS_AGENT")
+    }
+}
+
+#[cfg(windows)]
+fn parse_windows_command_line(value: &str) -> Result<Vec<String>> {
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+
+    for ch in value.chars() {
+        match (quote, ch) {
+            (Some(active), c) if c == active => quote = None,
+            (None, '"' | '\'') => quote = Some(ch),
+            (None, c) if c.is_whitespace() => {
+                if !current.is_empty() {
+                    args.push(std::mem::take(&mut current));
+                }
+            }
+            _ => current.push(ch),
+        }
+    }
+
+    if quote.is_some() {
+        bail!("invalid BURNCLOUD_GRAPHS_AGENT: unmatched quote");
+    }
+    if !current.is_empty() {
+        args.push(current);
+    }
+    if args.is_empty() {
+        bail!("invalid BURNCLOUD_GRAPHS_AGENT: empty command");
+    }
+    Ok(args)
+}
+
+fn external_path(path: &Path) -> String {
+    let value = path.display().to_string();
+    #[cfg(windows)]
+    {
+        value.strip_prefix(r"\\?\").unwrap_or(&value).to_string()
+    }
+    #[cfg(not(windows))]
+    {
+        value
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::parse_windows_command_line;
+
+    #[test]
+    fn windows_agent_parser_preserves_backslashes() {
+        let parsed = parse_windows_command_line(
+            r#"D:\work\graphs\agent.exe --flag "D:\target repo""#,
+        )
+        .unwrap();
+        assert_eq!(parsed[0], r"D:\work\graphs\agent.exe");
+        assert_eq!(parsed[1], "--flag");
+        assert_eq!(parsed[2], r"D:\target repo");
     }
 }
