@@ -29,30 +29,30 @@ jobs:
           ref: main
           path: target
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust build
+      - name: Cache Rust builds
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: target
+          workspaces: |
+            graphs
+            target
 
-      - name: Install graph runtime
+      - name: Build graph runtime and smoke agent
         working-directory: graphs
-        run: python -m pip install -e .
+        run: cargo build --bin burncloud-graphs --bin overview-patch-agent
 
-      - name: Execute UIGraph.run for Overview
+      - name: Download verified Overview migration patch
+        run: curl -fsSL https://github.com/burncloud/burncloud/pull/423.diff -o "${{ github.workspace }}/overview.patch"
+
+      - name: Execute Rust UiGraph for Overview
         working-directory: graphs
         env:
-          BURNCLOUD_GRAPHS_AGENT: bash ${{ github.workspace }}/graphs/scripts/patch_agent.sh
-          BURNCLOUD_GRAPHS_PATCH_URL: https://github.com/burncloud/burncloud/pull/423.diff
+          BURNCLOUD_GRAPHS_AGENT: ${{ github.workspace }}/graphs/target/debug/overview-patch-agent
+          BURNCLOUD_GRAPHS_PATCH_FILE: ${{ github.workspace }}/overview.patch
         run: |
-          burncloud-graphs run workloads/runtime-overview-smoke.toml \
+          ./target/debug/burncloud-graphs run workloads/runtime-overview-smoke.toml \
             --source-dir "${{ github.workspace }}/source" \
             --target-dir "${{ github.workspace }}/target" \
             --workspace "${{ github.workspace }}/graph-runtime" \
@@ -75,7 +75,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: overview-graph-runtime-evidence
-          path: |
-            graph-runtime/runs/**/state.json
+          name: overview-rust-graph-runtime-evidence
+          path: graph-runtime/runs/**/state.json
           if-no-files-found: error
