@@ -8,7 +8,11 @@ on:
 
 jobs:
   overview-runtime:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout graphs
         uses: actions/checkout@v4
@@ -44,28 +48,41 @@ jobs:
         run: cargo build --bin burncloud-graphs --bin overview-patch-agent
 
       - name: Download verified Overview migration patch
-        run: curl -fsSL https://github.com/burncloud/burncloud/pull/423.diff -o "${{ github.workspace }}/overview.patch"
+        shell: pwsh
+        run: |
+          Invoke-WebRequest `
+            -Uri 'https://github.com/burncloud/burncloud/pull/423.diff' `
+            -OutFile '${{ github.workspace }}/overview.patch'
 
       - name: Execute Rust UiGraph for Overview
+        shell: pwsh
         working-directory: graphs
-        env:
-          BURNCLOUD_GRAPHS_AGENT: ${{ github.workspace }}/graphs/target/debug/overview-patch-agent
-          BURNCLOUD_GRAPHS_PATCH_FILE: ${{ github.workspace }}/overview.patch
         run: |
-          ./target/debug/burncloud-graphs run workloads/runtime-overview-smoke.toml \
-            --source-dir "${{ github.workspace }}/source" \
-            --target-dir "${{ github.workspace }}/target" \
-            --workspace "${{ github.workspace }}/graph-runtime" \
-            --page overview \
+          $suffix = if ($IsWindows) { '.exe' } else { '' }
+          $env:BURNCLOUD_GRAPHS_AGENT = Join-Path '${{ github.workspace }}' "graphs/target/debug/overview-patch-agent$suffix"
+          $env:BURNCLOUD_GRAPHS_PATCH_FILE = Join-Path '${{ github.workspace }}' 'overview.patch'
+          $graph = Join-Path '${{ github.workspace }}' "graphs/target/debug/burncloud-graphs$suffix"
+
+          & $graph run workloads/runtime-overview-smoke.toml `
+            --source-dir '${{ github.workspace }}/source' `
+            --target-dir '${{ github.workspace }}/target' `
+            --workspace '${{ github.workspace }}/graph-runtime' `
+            --page overview `
             --no-branch
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Show machine-readable graph state
         if: always()
+        shell: pwsh
         run: |
-          find "${{ github.workspace }}/graph-runtime/runs" -name state.json -print -exec cat {} \;
+          Get-ChildItem '${{ github.workspace }}/graph-runtime/runs' -Filter state.json -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+            Get-Content $_.FullName
+          }
 
       - name: Show graph-produced target commit
         if: success()
+        shell: pwsh
         working-directory: target
         run: |
           git log -1 --format='graph_commit=%H%nsubject=%s%nauthor=%an <%ae>'
@@ -75,6 +92,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: overview-rust-graph-runtime-evidence
+          name: overview-rust-graph-runtime-evidence-${{ matrix.os }}
           path: graph-runtime/runs/**/state.json
           if-no-files-found: error
