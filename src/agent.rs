@@ -3,7 +3,7 @@ use crate::{
     repo::{CommandResult, RepoWorkspace},
     state::Finding,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -207,13 +207,13 @@ fn parse_windows_command_line(value: &str) -> Result<Vec<String>> {
     }
 
     if quote.is_some() {
-        bail!("invalid BURNCLOUD_GRAPHS_AGENT: unmatched quote");
+        anyhow::bail!("invalid BURNCLOUD_GRAPHS_AGENT: unmatched quote");
     }
     if !current.is_empty() {
         args.push(current);
     }
     if args.is_empty() {
-        bail!("invalid BURNCLOUD_GRAPHS_AGENT: empty command");
+        anyhow::bail!("invalid BURNCLOUD_GRAPHS_AGENT: empty command");
     }
     Ok(args)
 }
