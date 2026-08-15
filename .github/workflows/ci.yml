@@ -8,25 +8,35 @@ on:
       - 'agent/**'
 
 jobs:
-  self-check:
-    runs-on: ubuntu-latest
+  rust-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: '3.11'
+          components: rustfmt, clippy
 
-      - name: Install package
-        run: python -m pip install -e .
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
 
-      - name: Unit tests
-        run: python -m unittest discover -s tests -v
+      - name: Rust format
+        run: cargo fmt --all -- --check
 
-      - name: Compile Python
-        run: python -m compileall -q src tests
+      - name: Rust tests
+        run: cargo test --all-targets
+
+      - name: Rust clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build release CLI
+        run: cargo build --release
 
       - name: Validate full migration plan
-        run: burncloud-graphs plan workloads/burncloud-ui-to-burncloud.toml
+        run: cargo run --quiet -- plan workloads/burncloud-ui-to-burncloud.toml
