@@ -223,7 +223,7 @@ fn portable_command(program: &str, args: &[String]) -> Result<Command> {
         }
         let mut cmd = Command::new(resolved);
         cmd.args(args);
-        return Ok(cmd);
+        Ok(cmd)
     }
     #[cfg(not(windows))]
     {
