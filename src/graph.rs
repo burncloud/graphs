@@ -93,10 +93,7 @@ impl UiGraph {
             } else {
                 PromptBuilder::fix(&self.workload, &page, &agent_ctx, &findings)?
             };
-            let agent = match self
-                .agent
-                .run(&prompt, &agent_ctx, &page, &self.workspace)
-            {
+            let agent = match self.agent.run(&prompt, &agent_ctx, &page, &self.workspace) {
                 Ok(agent) => agent,
                 Err(error) => {
                     let gate = GateResult::fail(
