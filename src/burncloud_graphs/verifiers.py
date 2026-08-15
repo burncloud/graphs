@@ -109,6 +109,15 @@ class ContractVerifier:
 class VisualVerifier:
     name = "visual"
 
+    REACT_COPY_PATTERNS = (
+        "className=",
+        "motion/react",
+        "lucide-react",
+        "React.useState",
+        "useState(",
+        "@tailwindcss",
+    )
+
     def run(
         self,
         page: PageSpec,
@@ -118,6 +127,15 @@ class VisualVerifier:
     ) -> GateResult:
         text = workspace.working_text(target_dir)
         findings: list[Finding] = []
+
+        for token in self.REACT_COPY_PATTERNS:
+            if token.lower() in text.lower():
+                findings.append(
+                    Finding(
+                        self.name,
+                        f"Mechanical React/Tailwind copy detected in Dioxus migration: {token}",
+                    )
+                )
 
         for token in page.visual_required:
             if token.lower() not in text.lower():
@@ -168,12 +186,14 @@ class TruthVerifier:
                     )
                 )
 
-        suspicious_zero = re.compile(r"unwrap_or(?:_default)?\([^\n]*\)|unwrap_or\(0(?:\.0)?\)")
+        suspicious_zero = re.compile(
+            r"unwrap_or\(\s*(?:0(?:\.0)?|false|\"\"|String::new\(\))\s*\)"
+        )
         if suspicious_zero.search(text):
             findings.append(
                 Finding(
                     self.name,
-                    "Potential UNKNOWN→zero coercion found in page changes; preserve Unknown/Error unless zero is authoritative.",
+                    "Potential UNKNOWN→default coercion found in page changes; preserve Unknown/Error unless the default is authoritative.",
                     severity="warning",
                 )
             )
