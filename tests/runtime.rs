@@ -116,3 +116,27 @@ fn staged_page_is_hidden_from_next_page_delta() {
     assert!(text.contains("Providers"));
     assert!(!text.contains("Overview"));
 }
+
+#[cfg(windows)]
+#[test]
+fn windows_cmd_agent_runs_without_wsl() {
+    let temp = TempDir::new().unwrap();
+    let workspace = RepoWorkspace::new(temp.path().join("workspace")).unwrap();
+    let agent = temp.path().join("agent.cmd");
+    fs::write(
+        &agent,
+        "@echo off\r\nset /p graph_prompt=\r\necho AGENT_OK:%graph_prompt%\r\n",
+    )
+    .unwrap();
+
+    let result = workspace
+        .run_argv(
+            temp.path(),
+            agent.to_str().unwrap(),
+            &[],
+            Some("hello-from-graph\n"),
+        )
+        .unwrap();
+    assert!(result.ok(), "{}", result.stderr);
+    assert!(result.stdout.contains("AGENT_OK:hello-from-graph"));
+}
