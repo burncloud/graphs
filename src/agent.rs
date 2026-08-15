@@ -4,7 +4,10 @@ use crate::{
     state::Finding,
 };
 use anyhow::{Context, Result};
-use std::{env, fs, path::{Path, PathBuf}};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Clone)]
 pub struct AgentContext {
@@ -17,12 +20,17 @@ pub struct AgentContext {
 pub struct PromptBuilder;
 
 impl PromptBuilder {
-    pub fn implementation(workload: &Workload, page: &PageSpec, ctx: &AgentContext) -> Result<String> {
+    pub fn implementation(
+        workload: &Workload,
+        page: &PageSpec,
+        ctx: &AgentContext,
+    ) -> Result<String> {
         let visual = fs::read_to_string(&ctx.visual_contract)
             .with_context(|| format!("cannot read {}", ctx.visual_contract.display()))?;
         let truth = fs::read_to_string(&ctx.truth_contract)
             .with_context(|| format!("cannot read {}", ctx.truth_contract.display()))?;
-        Ok(format!(r#"Role: BurnCloud UI Graph Engineer
+        Ok(format!(
+            r#"Role: BurnCloud UI Graph Engineer
 
 You are implementing a frozen page migration. You are NOT the product designer.
 
@@ -74,25 +82,50 @@ EXECUTION RULES
             hints = bullets(&page.target_search),
             required = bullets(&page.required),
             forbidden = bullets(&page.forbidden),
-            notes = if page.notes.is_empty() { "None" } else { &page.notes },
+            notes = if page.notes.is_empty() {
+                "None"
+            } else {
+                &page.notes
+            },
             visual = visual,
             truth = truth,
         ))
     }
 
-    pub fn fix(workload: &Workload, page: &PageSpec, ctx: &AgentContext, findings: &[Finding]) -> Result<String> {
+    pub fn fix(
+        workload: &Workload,
+        page: &PageSpec,
+        ctx: &AgentContext,
+        findings: &[Finding],
+    ) -> Result<String> {
         let base = Self::implementation(workload, page, ctx)?;
-        let issues = findings.iter().map(|f| {
-            let path = f.path.as_deref().map(|p| format!(" ({p})")).unwrap_or_default();
-            format!("- [{}] {}{}", f.gate, f.message, path)
-        }).collect::<Vec<_>>().join("\n");
-        Ok(format!("{base}\nTHIS IS A TARGETED FIX PASS.\nThe previous implementation failed these gates:\n{issues}\n\nFix every listed failure without broadening scope.\n"))
+        let issues = findings
+            .iter()
+            .map(|f| {
+                let path = f
+                    .path
+                    .as_deref()
+                    .map(|p| format!(" ({p})"))
+                    .unwrap_or_default();
+                format!("- [{}] {}{}", f.gate, f.message, path)
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        Ok(format!(
+            "{base}\nTHIS IS A TARGETED FIX PASS.\nThe previous implementation failed these gates:\n{issues}\n\nFix every listed failure without broadening scope.\n"
+        ))
     }
 }
 
 fn bullets(items: &[String]) -> String {
-    if items.is_empty() { return "- none".into(); }
-    items.iter().map(|item| format!("- {item}")).collect::<Vec<_>>().join("\n")
+    if items.is_empty() {
+        return "- none".into();
+    }
+    items
+        .iter()
+        .map(|item| format!("- {item}"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[derive(Debug, Clone)]
@@ -105,23 +138,42 @@ pub struct AgentRunner {
 impl AgentRunner {
     pub fn new(spec: &AgentSpec) -> Result<Self> {
         let command = match env::var("BURNCLOUD_GRAPHS_AGENT") {
-            Ok(value) if !value.trim().is_empty() => shell_words::split(&value).context("invalid BURNCLOUD_GRAPHS_AGENT")?,
+            Ok(value) if !value.trim().is_empty() => {
+                shell_words::split(&value).context("invalid BURNCLOUD_GRAPHS_AGENT")?
+            }
             _ => spec.command.clone(),
         };
-        Ok(Self { command, timeout_seconds: spec.timeout_seconds })
+        Ok(Self {
+            command,
+            timeout_seconds: spec.timeout_seconds,
+        })
     }
 
-    pub fn configured(&self) -> bool { !self.command.is_empty() }
+    pub fn configured(&self) -> bool {
+        !self.command.is_empty()
+    }
 
-    pub fn run(&self, prompt: &str, ctx: &AgentContext, page: &PageSpec, workspace: &RepoWorkspace) -> Result<CommandResult> {
-        let (program, raw_args) = self.command.split_first().context("implementation agent is not configured")?;
+    pub fn run(
+        &self,
+        prompt: &str,
+        ctx: &AgentContext,
+        page: &PageSpec,
+        workspace: &RepoWorkspace,
+    ) -> Result<CommandResult> {
+        let (program, raw_args) = self
+            .command
+            .split_first()
+            .context("implementation agent is not configured")?;
         let source = ctx.source_dir.display().to_string();
         let target = ctx.target_dir.display().to_string();
-        let args = raw_args.iter().map(|arg| {
-            arg.replace("{source_dir}", &source)
-                .replace("{target_dir}", &target)
-                .replace("{page}", &page.name)
-        }).collect::<Vec<_>>();
+        let args = raw_args
+            .iter()
+            .map(|arg| {
+                arg.replace("{source_dir}", &source)
+                    .replace("{target_dir}", &target)
+                    .replace("{page}", &page.name)
+            })
+            .collect::<Vec<_>>();
         workspace.run_argv(Path::new(&ctx.target_dir), program, &args, Some(prompt))
     }
 }

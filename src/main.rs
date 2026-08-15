@@ -15,7 +15,11 @@ use state::{GraphState, Status};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
-#[command(name = "burncloud-graphs", version, about = "Rust-native BurnCloud Graph Engineering runtime")]
+#[command(
+    name = "burncloud-graphs",
+    version,
+    about = "Rust-native BurnCloud Graph Engineering runtime"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -54,15 +58,26 @@ fn run() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Plan { workload, pages } => plan(workload, pages),
-        Commands::Run { workload, pages, workspace, source_dir, target_dir, no_branch } => {
-            execute(workload, pages, workspace, source_dir, target_dir, no_branch)
-        }
+        Commands::Run {
+            workload,
+            pages,
+            workspace,
+            source_dir,
+            target_dir,
+            no_branch,
+        } => execute(
+            workload, pages, workspace, source_dir, target_dir, no_branch,
+        ),
     }
 }
 
 fn select_pages(workload: &Workload, requested: Vec<String>) -> Result<Vec<String>> {
-    if requested.is_empty() { return Ok(workload.page_names()); }
-    for page in &requested { workload.page(page)?; }
+    if requested.is_empty() {
+        return Ok(workload.page_names());
+    }
+    for page in &requested {
+        workload.page(page)?;
+    }
     Ok(requested)
 }
 
@@ -72,7 +87,13 @@ fn plan(path: PathBuf, requested: Vec<String>) -> Result<()> {
     println!("Workload: {}", workload.name);
     for (index, name) in pages.iter().enumerate() {
         let page = workload.page(name)?;
-        println!("{:02}. {}: {} <- {}", index + 1, page.name, page.question, page.source);
+        println!(
+            "{:02}. {}: {} <- {}",
+            index + 1,
+            page.name,
+            page.question,
+            page.source
+        );
     }
     Ok(())
 }
@@ -94,7 +115,10 @@ fn execute(
 
     let dirty = repos.changed_files(&target)?;
     if !dirty.is_empty() {
-        bail!("target repository must be clean before a graph run: {}", dirty.join(", "));
+        bail!(
+            "target repository must be clean before a graph run: {}",
+            dirty.join(", ")
+        );
     }
 
     let mut state = GraphState::new(
@@ -109,7 +133,10 @@ fn execute(
         state.event("git", format!("prepared target branch {branch}"));
     }
 
-    let state_file = workspace_root.join("runs").join(&state.run_id).join("state.json");
+    let state_file = workspace_root
+        .join("runs")
+        .join(&state.run_id)
+        .join("state.json");
     state.save(&state_file)?;
     let agent = AgentRunner::new(&workload.agent)?;
     if !agent.configured() {
@@ -124,18 +151,37 @@ fn execute(
         agent,
         state_file: state_file.clone(),
         state,
-    }.run()?;
+    }
+    .run()?;
 
     println!("Run state: {}", state_file.display());
-    if let Some(branch) = &result.branch { println!("Target branch: {branch}"); }
-    if let Some(commit) = &result.commit_sha { println!("Commit: {commit}"); }
+    if let Some(branch) = &result.branch {
+        println!("Target branch: {branch}");
+    }
+    if let Some(commit) = &result.commit_sha {
+        println!("Commit: {commit}");
+    }
 
-    let failed_pages = result.pages.values().filter(|run| run.status == Status::Failed).map(|run| run.name.clone()).collect::<Vec<_>>();
-    let failed_final = result.final_gates.iter().filter(|gate| !gate.passed()).map(|gate| gate.name.clone()).collect::<Vec<_>>();
+    let failed_pages = result
+        .pages
+        .values()
+        .filter(|run| run.status == Status::Failed)
+        .map(|run| run.name.clone())
+        .collect::<Vec<_>>();
+    let failed_final = result
+        .final_gates
+        .iter()
+        .filter(|gate| !gate.passed())
+        .map(|gate| gate.name.clone())
+        .collect::<Vec<_>>();
     if !failed_pages.is_empty() || !failed_final.is_empty() {
         println!("FAILED");
-        if !failed_pages.is_empty() { println!("Pages: {}", failed_pages.join(", ")); }
-        if !failed_final.is_empty() { println!("Final gates: {}", failed_final.join(", ")); }
+        if !failed_pages.is_empty() {
+            println!("Pages: {}", failed_pages.join(", "));
+        }
+        if !failed_final.is_empty() {
+            println!("Final gates: {}", failed_final.join(", "));
+        }
         bail!("graph run failed");
     }
     println!("PASSED");
@@ -143,6 +189,10 @@ fn execute(
 }
 
 fn absolute(path: PathBuf) -> Result<PathBuf> {
-    if path.is_absolute() { return Ok(path); }
-    Ok(std::env::current_dir().context("cannot determine current directory")?.join(path))
+    if path.is_absolute() {
+        return Ok(path);
+    }
+    Ok(std::env::current_dir()
+        .context("cannot determine current directory")?
+        .join(path))
 }

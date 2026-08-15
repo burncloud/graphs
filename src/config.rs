@@ -1,6 +1,9 @@
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RepoSpec {
@@ -9,7 +12,9 @@ pub struct RepoSpec {
     pub r#ref: String,
 }
 
-fn default_ref() -> String { "main".to_string() }
+fn default_ref() -> String {
+    "main".to_string()
+}
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct AgentSpec {
@@ -19,7 +24,9 @@ pub struct AgentSpec {
     pub timeout_seconds: u64,
 }
 
-fn default_timeout() -> u64 { 1800 }
+fn default_timeout() -> u64 {
+    1800
+}
 
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ContractSpec {
@@ -69,7 +76,9 @@ struct WorkloadMeta {
     pub max_attempts: u32,
 }
 
-fn default_attempts() -> u32 { 3 }
+fn default_attempts() -> u32 {
+    3
+}
 
 #[derive(Debug, Clone, Deserialize)]
 struct RawWorkload {
@@ -100,13 +109,17 @@ pub struct Workload {
 
 impl Workload {
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref().canonicalize()
+        let path = path
+            .as_ref()
+            .canonicalize()
             .with_context(|| format!("cannot resolve workload {}", path.as_ref().display()))?;
         let text = fs::read_to_string(&path)
             .with_context(|| format!("cannot read workload {}", path.display()))?;
         let raw: RawWorkload = toml::from_str(&text)
             .with_context(|| format!("invalid workload TOML {}", path.display()))?;
-        let root = path.parent().and_then(Path::parent)
+        let root = path
+            .parent()
+            .and_then(Path::parent)
             .context("workload must live under a repository subdirectory such as workloads/")?;
         let workload = Self {
             name: raw.workload.name,
@@ -119,12 +132,16 @@ impl Workload {
             visual_contract: root.join(raw.contracts.visual),
             truth_contract: root.join(raw.contracts.truth),
         };
-        if workload.pages.is_empty() { bail!("workload has no pages"); }
+        if workload.pages.is_empty() {
+            bail!("workload has no pages");
+        }
         Ok(workload)
     }
 
     pub fn page(&self, name: &str) -> Result<&PageSpec> {
-        self.pages.iter().find(|p| p.name == name)
+        self.pages
+            .iter()
+            .find(|p| p.name == name)
             .with_context(|| format!("unknown page: {name}"))
     }
 

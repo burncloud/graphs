@@ -25,7 +25,8 @@ impl UiGraph {
 
         for page_name in self.state.selected_pages.clone() {
             if !self.run_page(&page_name)? {
-                self.state.event("graph", format!("stopped at failed page {page_name}"));
+                self.state
+                    .event("graph", format!("stopped at failed page {page_name}"));
                 self.checkpoint()?;
                 return Ok(self.state);
             }
@@ -49,13 +50,16 @@ impl UiGraph {
         let page = self.workload.page(page_name)?.clone();
         let source = verifier::source_gate(&page, &self.source_dir);
         if !source.passed() {
-            self.state.pages.insert(page.name.clone(), PageRun {
-                name: page.name,
-                status: Status::Failed,
-                attempt: 0,
-                gates: vec![source],
-                changed_files: vec![],
-            });
+            self.state.pages.insert(
+                page.name.clone(),
+                PageRun {
+                    name: page.name,
+                    status: Status::Failed,
+                    attempt: 0,
+                    gates: vec![source],
+                    changed_files: vec![],
+                },
+            );
             self.checkpoint()?;
             return Ok(false);
         }
@@ -70,11 +74,18 @@ impl UiGraph {
 
         for attempt in 1..=self.workload.max_attempts {
             let node = if attempt == 1 { "implement" } else { "fix" };
-            self.state.event(node, format!("{} attempt {attempt}", page.name));
-            self.state.pages.insert(page.name.clone(), PageRun {
-                name: page.name.clone(), status: Status::Running, attempt,
-                gates: vec![source.clone()], changed_files: vec![],
-            });
+            self.state
+                .event(node, format!("{} attempt {attempt}", page.name));
+            self.state.pages.insert(
+                page.name.clone(),
+                PageRun {
+                    name: page.name.clone(),
+                    status: Status::Running,
+                    attempt,
+                    gates: vec![source.clone()],
+                    changed_files: vec![],
+                },
+            );
             self.checkpoint()?;
 
             let prompt = if attempt == 1 {
@@ -82,17 +93,28 @@ impl UiGraph {
             } else {
                 PromptBuilder::fix(&self.workload, &page, &agent_ctx, &findings)?
             };
-            let agent = self.agent.run(&prompt, &agent_ctx, &page, &self.workspace)?;
+            let agent = self
+                .agent
+                .run(&prompt, &agent_ctx, &page, &self.workspace)?;
             if !agent.ok() {
                 let gate = GateResult::fail_output(
                     "agent",
-                    vec![Finding::error("agent", "implementation agent failed").with_detail(tail(&agent.stderr, 4000))],
+                    vec![
+                        Finding::error("agent", "implementation agent failed")
+                            .with_detail(tail(&agent.stderr, 4000)),
+                    ],
                     tail(&(agent.stdout + "\n" + &agent.stderr), 20_000),
                 );
-                self.state.pages.insert(page.name.clone(), PageRun {
-                    name: page.name.clone(), status: Status::Failed, attempt,
-                    gates: vec![source.clone(), gate], changed_files: self.workspace.working_files(&self.target_dir)?,
-                });
+                self.state.pages.insert(
+                    page.name.clone(),
+                    PageRun {
+                        name: page.name.clone(),
+                        status: Status::Failed,
+                        attempt,
+                        gates: vec![source.clone(), gate],
+                        changed_files: self.workspace.working_files(&self.target_dir)?,
+                    },
+                );
                 self.checkpoint()?;
                 return Ok(false);
             }
@@ -100,27 +122,55 @@ impl UiGraph {
             let mut gates = vec![source.clone()];
             gates.extend(self.verification_gates(&page)?);
             let changed_files = self.workspace.working_files(&self.target_dir)?;
-            findings = gates.iter().filter(|gate| !gate.passed())
-                .flat_map(|gate| gate.findings.clone()).collect();
+            findings = gates
+                .iter()
+                .filter(|gate| !gate.passed())
+                .flat_map(|gate| gate.findings.clone())
+                .collect();
 
             if findings.is_empty() {
                 self.workspace.stage_working(&self.target_dir)?;
-                self.state.pages.insert(page.name.clone(), PageRun {
-                    name: page.name.clone(), status: Status::Passed, attempt, gates, changed_files,
-                });
-                self.state.event("page", format!("{} passed all gates and was staged", page.name));
+                self.state.pages.insert(
+                    page.name.clone(),
+                    PageRun {
+                        name: page.name.clone(),
+                        status: Status::Passed,
+                        attempt,
+                        gates,
+                        changed_files,
+                    },
+                );
+                self.state.event(
+                    "page",
+                    format!("{} passed all gates and was staged", page.name),
+                );
                 self.checkpoint()?;
                 return Ok(true);
             }
 
-            self.state.pages.insert(page.name.clone(), PageRun {
-                name: page.name.clone(), status: Status::Running, attempt, gates, changed_files,
-            });
+            self.state.pages.insert(
+                page.name.clone(),
+                PageRun {
+                    name: page.name.clone(),
+                    status: Status::Running,
+                    attempt,
+                    gates,
+                    changed_files,
+                },
+            );
             self.checkpoint()?;
         }
 
-        if let Some(run) = self.state.pages.get_mut(&page.name) { run.status = Status::Failed; }
-        self.state.event("page", format!("{} exhausted {} attempts", page.name, self.workload.max_attempts));
+        if let Some(run) = self.state.pages.get_mut(&page.name) {
+            run.status = Status::Failed;
+        }
+        self.state.event(
+            "page",
+            format!(
+                "{} exhausted {} attempts",
+                page.name, self.workload.max_attempts
+            ),
+        );
         self.checkpoint()?;
         Ok(false)
     }
@@ -133,7 +183,12 @@ impl UiGraph {
             verifier::visual_gate(page, &self.target_dir, &self.workspace)?,
         ];
         if !self.workload.verify.page_commands.is_empty() {
-            gates.push(verifier::command_gate("build", &self.workload.verify.page_commands, &self.target_dir, &self.workspace)?);
+            gates.push(verifier::command_gate(
+                "build",
+                &self.workload.verify.page_commands,
+                &self.target_dir,
+                &self.workspace,
+            )?);
         }
         Ok(gates)
     }
@@ -144,19 +199,33 @@ impl UiGraph {
             gates.push(verifier::builtin_gate(check, &self.target_dir)?);
         }
         if !self.workload.verify.cross_page_commands.is_empty() {
-            gates.push(verifier::command_gate("cross-page", &self.workload.verify.cross_page_commands, &self.target_dir, &self.workspace)?);
+            gates.push(verifier::command_gate(
+                "cross-page",
+                &self.workload.verify.cross_page_commands,
+                &self.target_dir,
+                &self.workspace,
+            )?);
         }
         if !self.workload.verify.final_commands.is_empty() {
-            gates.push(verifier::command_gate("final-build", &self.workload.verify.final_commands, &self.target_dir, &self.workspace)?);
+            gates.push(verifier::command_gate(
+                "final-build",
+                &self.workload.verify.final_commands,
+                &self.target_dir,
+                &self.workspace,
+            )?);
         }
         self.state.final_gates = gates;
         self.checkpoint()
     }
 
-    fn checkpoint(&self) -> Result<()> { self.state.save(&self.state_file) }
+    fn checkpoint(&self) -> Result<()> {
+        self.state.save(&self.state_file)
+    }
 }
 
 fn tail(value: &str, max: usize) -> String {
-    if value.len() <= max { return value.to_string(); }
-    value[value.len()-max..].to_string()
+    if value.len() <= max {
+        return value.to_string();
+    }
+    value[value.len() - max..].to_string()
 }
