@@ -1,0 +1,189 @@
+[workload]
+name = "rustburn/burncloud-ui -> burncloud/burncloud Dioxus console"
+max_attempts = 3
+
+[source]
+url = "https://github.com/rustburn/burncloud-ui.git"
+ref = "main"
+
+[target]
+url = "https://github.com/burncloud/burncloud.git"
+ref = "main"
+
+[agent]
+# Example; the runtime also accepts BURNCLOUD_GRAPHS_AGENT.
+# command = ["codex", "exec", "--sandbox", "workspace-write", "-C", "{target_dir}", "-"]
+command = []
+timeout_seconds = 1800
+
+[contracts]
+visual = "contracts/visual-language.md"
+truth = "contracts/data-truth.md"
+
+[verify]
+page_commands = [
+  "cargo check -p burncloud-client --no-default-features --features web"
+]
+builtin_checks = [
+  "burncloud_functional_wiring",
+  "burncloud_product_ux"
+]
+cross_page_commands = []
+final_commands = [
+  "cargo check -p burncloud-client --no-default-features --features web"
+]
+truth_forbidden_claims = [
+  "Pristine silicon attestation active",
+  "SECURE TPM",
+  "SIGNED BY ROOT",
+  "INSANELY GREAT"
+]
+
+# All 16 routed React page components are represented below. `Home` covers both
+# /home and /landing in the reference app.
+
+[[pages]]
+name = "public-home"
+source = "src/pages/Home.tsx"
+question = "What is BurnCloud, what can it truthfully promise, and how does a user enter the product?"
+target_search = ["critical_pages", "landing", "home", "route_aliases"]
+required = ["BurnCloud"]
+forbidden = ["100% Cryptographically Traceable", "Zero Proxy Tampering", "VERIFIED SILICON", "99.999% Hardware Enclave Uptime"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+notes = "Preserve the premium public-site composition but downgrade every claim to what the real server/client evidence can prove."
+
+[[pages]]
+name = "login"
+source = "src/pages/Login.tsx"
+question = "How does a real user authenticate to BurnCloud using mechanisms the backend actually supports?"
+target_search = ["critical_pages/auth.rs", "auth_gate.rs", "login"]
+required = ["Sign"]
+forbidden = ["TPM Hardware Attested Portal", "WebAuthn TPM", "Hardware Proof Protocol"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "register"
+source = "src/pages/Register.tsx"
+question = "How does a new organization/account get created using real registration and plan semantics?"
+target_search = ["critical_pages/auth.rs", "register", "signup"]
+required = ["Account"]
+forbidden = ["$5 Free Token Credits", "Provisioning cryptographic workspace & TPM keys", "Silicon Attested Multi-Cloud Infrastructure"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "overview"
+source = "src/pages/Overview.tsx"
+question = "What is the overall state of BurnCloud right now?"
+target_search = ["overview", "dashboard", "functional_layout", "pages.rs"]
+required = ["Overview"]
+forbidden = ["Steve's Critique", "Cryptographic Scan", "100% Traceability", "Pristine silicon"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+notes = "Keep the refined reference styling, but remove simulated trust/aesthetic-review features and make cross-domain summary subordinate to real source-of-truth state."
+
+[[pages]]
+name = "providers"
+source = "src/pages/Providers.tsx"
+question = "Is upstream supply configured and usable, and which provider needs attention?"
+target_search = ["functional_pages/providers.rs", "provider", "channel"]
+required = ["Provider"]
+forbidden = ["Math.random", "Run Latency Audit"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "models"
+source = "src/pages/Models.tsx"
+question = "Which models can BurnCloud expose from real provider/model configuration?"
+target_search = ["functional_pages/catalog.rs", "model catalog", "models"]
+required = ["Model"]
+forbidden = ["Save up to 88%", "GPT-4o base benchmarks"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "routes"
+source = "src/pages/Routes.tsx"
+question = "How will requests route and what fallback behavior is actually configured?"
+target_search = ["route", "routing", "fallback", "functional_pages"]
+required = ["Route"]
+forbidden = ["setTimeout", "Route created"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "playground"
+source = "src/pages/Playground.tsx"
+question = "Can the operator send one real request through BurnCloud and inspect the real routing result?"
+target_search = ["functional_pages/playground.rs", "playground_live.rs"]
+required = ["Playground"]
+forbidden = ["watch the magic happen", "simulateLogs", "94% saving"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "requests"
+source = "src/pages/Logs.tsx"
+question = "What happened to each routed request, based on persisted request-level evidence?"
+target_search = ["functional_pages/logs_full.rs", "RouterLog", "observability"]
+required = ["Request"]
+forbidden = ["You are a senior legal"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "evaluation"
+source = "src/pages/Evaluation.tsx"
+question = "What bounded, reproducible model evaluation results does BurnCloud actually have?"
+target_search = ["evaluation", "analytics", "model"]
+required = ["Evaluation"]
+forbidden = ["claude-fable-5", "Last updated: 2 hours ago"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "customers"
+source = "src/pages/Customers.tsx"
+question = "Which customer/tenant accounts exist and what authoritative limits, usage and status belong to them?"
+target_search = ["functional_pages/access.rs", "customer", "tenant"]
+required = ["Customer"]
+forbidden = ["ETR Global", "AlphaCorp"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "api-keys"
+source = "src/pages/APIKeys.tsx"
+question = "Which credentials grant access, to whom, with what real restrictions and lifecycle state?"
+target_search = ["functional_pages/api_keys_live.rs", "api key", "token"]
+required = ["API"]
+forbidden = ["bk_live_2a8b9e1d", "Wei Huang"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "billing"
+source = "src/pages/Billing.tsx"
+question = "What authoritative usage/cost/billing truth can BurnCloud show without invented savings or margins?"
+target_search = ["billing", "analytics_full.rs", "usage"]
+required = ["Billing"]
+forbidden = ["$38,542", "$14,820", "Estimated Savings"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "guardrails"
+source = "src/pages/Guardrails.tsx"
+question = "Which persisted protections are active and what real signals/actions have they produced?"
+target_search = ["functional_pages/guardrails.rs", "guardrails_live.rs"]
+required = ["Guardrail"]
+forbidden = ["4111-2222-3333-4444", "98% confidence", "Interactive Simulation"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "team"
+source = "src/pages/Team.tsx"
+question = "Who actually has console authority according to the real identity/authorization backend?"
+target_search = ["team", "admin", "RBAC", "access"]
+required = ["Team"]
+forbidden = ["William Hayes", "Sarah Chen", "RBAC Enabled"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+
+[[pages]]
+name = "settings"
+source = "src/pages/Settings.tsx"
+question = "Which global environment/runtime settings are actually persisted and editable here?"
+target_search = ["settings", "platform_live.rs", "functional_api"]
+required = ["Settings"]
+forbidden = ["hooks.slack.com/services/T00000000", "received HTTP 200 OK from Slack"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]

@@ -1,0 +1,48 @@
+[workload]
+name = "runtime smoke: rustburn/burncloud-ui Overview -> burncloud/burncloud"
+max_attempts = 3
+
+[source]
+url = "https://github.com/rustburn/burncloud-ui.git"
+ref = "main"
+
+[target]
+url = "https://github.com/burncloud/burncloud.git"
+ref = "main"
+
+[agent]
+command = []
+timeout_seconds = 1800
+
+[contracts]
+visual = "contracts/visual-language.md"
+truth = "contracts/data-truth.md"
+
+[verify]
+page_commands = [
+  "cargo check -p burncloud-client --no-default-features --features liveview"
+]
+builtin_checks = [
+  "burncloud_functional_wiring",
+  "burncloud_product_ux"
+]
+cross_page_commands = []
+final_commands = [
+  "cargo check -p burncloud-client --no-default-features --features liveview"
+]
+truth_forbidden_claims = [
+  "Pristine silicon attestation active",
+  "SECURE TPM",
+  "SIGNED BY ROOT",
+  "INSANELY GREAT"
+]
+
+[[pages]]
+name = "overview"
+source = "src/pages/Overview.tsx"
+question = "What is the overall state of BurnCloud right now?"
+target_search = ["overview", "dashboard", "functional_layout", "pages.rs"]
+required = ["Overview"]
+forbidden = ["Steve's Critique", "Cryptographic Scan", "100% Traceability", "Pristine silicon"]
+allowed_paths = ["crates/client/src/**", "crates/client/assets/**", "docs/ui/**"]
+notes = "Runtime proof workload. Keep the refined reference styling, remove simulated trust features, preserve UNKNOWN/error semantics, and keep Overview as a cross-domain summary rather than a management surface. Commands are platform-neutral so the same workload runs from PowerShell/CMD, macOS, or Linux. The smoke proves the graph runtime, client compilation, built-in cross-page gates, state evidence, and graph-owned commit; full BurnCloud application integration remains a separate target-repository CI responsibility."

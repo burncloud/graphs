@@ -1,0 +1,42 @@
+name: Graph Harness CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'agent/**'
+
+jobs:
+  rust-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Rust format
+        run: cargo fmt --all -- --check
+
+      - name: Rust tests
+        run: cargo test --all-targets
+
+      - name: Rust clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build release CLI
+        run: cargo build --release
+
+      - name: Validate full migration plan
+        run: cargo run --quiet -- plan workloads/burncloud-ui-to-burncloud.toml
