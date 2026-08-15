@@ -242,10 +242,27 @@ fn resolve_windows_program(program: &str) -> Option<PathBuf> {
     if !output.status.success() {
         return None;
     }
-    String::from_utf8_lossy(&output.stdout)
+    let candidates = String::from_utf8_lossy(&output.stdout)
         .lines()
-        .next()
-        .map(|line| PathBuf::from(line.trim()))
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(PathBuf::from)
+        .collect::<Vec<_>>();
+    select_windows_program(candidates)
+}
+
+#[cfg(windows)]
+fn select_windows_program(candidates: Vec<PathBuf>) -> Option<PathBuf> {
+    for preferred in ["exe", "com", "cmd", "bat"] {
+        if let Some(path) = candidates.iter().find(|path| {
+            path.extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| ext.eq_ignore_ascii_case(preferred))
+        }) {
+            return Some(path.clone());
+        }
+    }
+    candidates.into_iter().next()
 }
 
 #[cfg(windows)]
@@ -257,4 +274,23 @@ fn quote_windows(value: &str) -> String {
         return value.into();
     }
     format!("\"{}\"", value.replace('"', "\\\""))
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::select_windows_program;
+    use std::path::PathBuf;
+
+    #[test]
+    fn windows_program_resolution_prefers_cmd_over_extensionless_npm_shim() {
+        let resolved = select_windows_program(vec![
+            PathBuf::from(r"C:\Users\huang\AppData\Roaming\npm\codex"),
+            PathBuf::from(r"C:\Users\huang\AppData\Roaming\npm\codex.cmd"),
+        ])
+        .unwrap();
+        assert_eq!(
+            resolved,
+            PathBuf::from(r"C:\Users\huang\AppData\Roaming\npm\codex.cmd")
+        );
+    }
 }
