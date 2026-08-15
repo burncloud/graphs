@@ -170,15 +170,6 @@ impl GraphState {
         }
     }
 
-    pub fn page_mut(&mut self, name: &str) -> &mut PageRun {
-        self.pages
-            .entry(name.to_string())
-            .or_insert_with(|| PageRun {
-                name: name.to_string(),
-                ..Default::default()
-            })
-    }
-
     pub fn event(&mut self, node: &str, message: impl Into<String>) {
         self.events.push(Event {
             at: Utc::now(),
