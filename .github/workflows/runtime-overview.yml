@@ -52,7 +52,7 @@ jobs:
           BURNCLOUD_GRAPHS_AGENT: bash ${{ github.workspace }}/graphs/scripts/patch_agent.sh
           BURNCLOUD_GRAPHS_PATCH_URL: https://github.com/burncloud/burncloud/pull/423.diff
         run: |
-          burncloud-graphs run workloads/burncloud-ui-to-burncloud.toml \
+          burncloud-graphs run workloads/runtime-overview-smoke.toml \
             --source-dir "${{ github.workspace }}/source" \
             --target-dir "${{ github.workspace }}/target" \
             --workspace "${{ github.workspace }}/graph-runtime" \
