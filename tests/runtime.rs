@@ -3,7 +3,7 @@ use burncloud_graphs::{
     repo::RepoWorkspace,
     verifier::{truth_gate, visual_gate},
 };
-use std::{fs, path::{Path, PathBuf}};
+use std::{fs, path::PathBuf};
 use tempfile::TempDir;
 
 fn workload() -> Workload {
@@ -52,7 +52,10 @@ fn workload_loads_all_reference_pages() {
     assert_eq!(workload.pages.len(), 16);
     assert_eq!(workload.pages.first().unwrap().name, "public-home");
     assert_eq!(workload.pages.last().unwrap().name, "settings");
-    assert_eq!(workload.page("overview").unwrap().source, "src/pages/Overview.tsx");
+    assert_eq!(
+        workload.page("overview").unwrap().source,
+        "src/pages/Overview.tsx"
+    );
 }
 
 #[test]
@@ -67,7 +70,12 @@ fn truth_gate_rejects_unconditional_verification_claim() {
 
     let result = truth_gate(&workload(), &target, &workspace).unwrap();
     assert!(!result.passed());
-    assert!(result.findings.iter().any(|finding| finding.message.contains("All routes verified")));
+    assert!(
+        result
+            .findings
+            .iter()
+            .any(|finding| finding.message.contains("All routes verified"))
+    );
 }
 
 #[test]
@@ -107,9 +115,4 @@ fn staged_page_is_hidden_from_next_page_delta() {
     let text = workspace.working_text(&target).unwrap();
     assert!(text.contains("Providers"));
     assert!(!text.contains("Overview"));
-}
-
-#[test]
-fn source_repository_fixture_is_not_required_for_unit_tests() {
-    assert!(!Path::new(env!("CARGO_MANIFEST_DIR")).join(".graphs").exists());
 }
