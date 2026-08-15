@@ -30,7 +30,7 @@ Required tools:
 - Git
 - a coding agent executable such as Codex CLI, Claude Code, or another command that accepts prompts on stdin
 
-No Python runtime is required. No WSL dependency is required by BurnCloud Graphs itself.
+No Python runtime is required. No WSL dependency is required by BurnCloud Graphs itself. Workload checks are launched as direct process arguments rather than through Bash.
 
 ## Quick start
 
