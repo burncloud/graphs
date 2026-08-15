@@ -236,10 +236,9 @@ mod tests {
 
     #[test]
     fn windows_agent_parser_preserves_backslashes() {
-        let parsed = parse_windows_command_line(
-            r#"D:\work\graphs\agent.exe --flag "D:\target repo""#,
-        )
-        .unwrap();
+        let parsed =
+            parse_windows_command_line(r#"D:\work\graphs\agent.exe --flag "D:\target repo""#)
+                .unwrap();
         assert_eq!(parsed[0], r"D:\work\graphs\agent.exe");
         assert_eq!(parsed[1], "--flag");
         assert_eq!(parsed[2], r"D:\target repo");
