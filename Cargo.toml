@@ -2,6 +2,7 @@
 name = "burncloud-graphs"
 version = "0.2.0"
 edition = "2024"
+default-run = "burncloud-graphs"
 description = "Rust-native Graph Engineering runtime for BurnCloud UI migrations"
 license = "Apache-2.0"
 
