@@ -11,8 +11,8 @@ url = "https://github.com/burncloud/burncloud.git"
 ref = "main"
 
 [agent]
-# Example (configure locally; intentionally empty in-repo):
-# command = ["codex", "exec", "--full-auto", "-C", "{target_dir}", "-"]
+# Example; the runtime also accepts BURNCLOUD_GRAPHS_AGENT.
+# command = ["codex", "exec", "--sandbox", "workspace-write", "-C", "{target_dir}", "-"]
 command = []
 timeout_seconds = 1800
 
@@ -22,15 +22,16 @@ truth = "contracts/data-truth.md"
 
 [verify]
 page_commands = [
-  "cargo fmt --all -- --check",
+  "cargo fmt -p burncloud-client -- --check",
   "cargo check -p burncloud-client --no-default-features --features web"
 ]
-cross_page_commands = [
-  "bash crates/client/scripts/check-functional-wiring.sh",
-  "bash crates/client/scripts/check-product-ux.sh"
+builtin_checks = [
+  "burncloud_functional_wiring",
+  "burncloud_product_ux"
 ]
+cross_page_commands = []
 final_commands = [
-  "cargo fmt --all -- --check",
+  "cargo fmt -p burncloud-client -- --check",
   "cargo check -p burncloud-client --no-default-features --features web"
 ]
 truth_forbidden_claims = [
@@ -39,9 +40,6 @@ truth_forbidden_claims = [
   "SIGNED BY ROOT",
   "INSANELY GREAT"
 ]
-
-# All 16 routed React page components are represented below. `Home` covers both
-# /home and /landing in the reference app.
 
 [[pages]]
 name = "public-home"
