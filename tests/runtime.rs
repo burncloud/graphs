@@ -70,12 +70,12 @@ fn truth_gate_rejects_unconditional_verification_claim() {
 
     let result = truth_gate(&workload(), &target, &workspace).unwrap();
     assert!(!result.passed());
-    assert!(
-        result
-            .findings
-            .iter()
-            .any(|finding| finding.message.contains("All routes verified"))
-    );
+    assert!(result.findings.iter().any(|finding| {
+        finding
+            .message
+            .to_ascii_lowercase()
+            .contains("all routes verified")
+    }));
 }
 
 #[test]
