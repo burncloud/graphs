@@ -15,6 +15,6 @@ curl -fsSL "$BURNCLOUD_GRAPHS_PATCH_URL" -o "$patch_file"
 git apply --check "$patch_file"
 git apply "$patch_file"
 
-# Format only the client package owned by this migration. Workspace-wide rustfmt
-# can fail on unrelated pre-existing files and would violate the page scope gate.
-cargo fmt -p burncloud-client
+# Deliberately do not run package- or workspace-wide formatters here. The graph
+# must evaluate only the migration delta, while target-repository CI commands
+# decide whether the resulting application is valid.
