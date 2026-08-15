@@ -187,10 +187,10 @@ impl RepoWorkspace {
         let mut child = cmd
             .spawn()
             .with_context(|| format!("cannot start command: {rendered}"))?;
-        if let Some(input) = stdin {
-            if let Some(mut child_stdin) = child.stdin.take() {
-                child_stdin.write_all(input.as_bytes())?;
-            }
+        if let Some(input) = stdin
+            && let Some(mut child_stdin) = child.stdin.take()
+        {
+            child_stdin.write_all(input.as_bytes())?;
         }
         let output: Output = child.wait_with_output()?;
         Ok(CommandResult {
