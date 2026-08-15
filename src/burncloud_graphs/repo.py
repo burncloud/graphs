@@ -130,7 +130,19 @@ class RepoWorkspace:
             raise RuntimeError(result.stderr)
 
     def commit_staged(self, target: Path, message: str) -> str:
-        result = self.run_argv(["git", "commit", "-m", message], target)
+        result = self.run_argv(
+            [
+                "git",
+                "-c",
+                "user.name=BurnCloud Graphs",
+                "-c",
+                "user.email=graphs@burncloud.local",
+                "commit",
+                "-m",
+                message,
+            ],
+            target,
+        )
         if not result.ok:
             raise RuntimeError(f"Could not commit graph result: {result.stderr}")
         return self.run_argv(["git", "rev-parse", "HEAD"], target).stdout.strip()
