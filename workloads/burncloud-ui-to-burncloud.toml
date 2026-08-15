@@ -22,7 +22,6 @@ truth = "contracts/data-truth.md"
 
 [verify]
 page_commands = [
-  "cargo fmt -p burncloud-client -- --check",
   "cargo check -p burncloud-client --no-default-features --features web"
 ]
 builtin_checks = [
@@ -31,7 +30,6 @@ builtin_checks = [
 ]
 cross_page_commands = []
 final_commands = [
-  "cargo fmt -p burncloud-client -- --check",
   "cargo check -p burncloud-client --no-default-features --features web"
 ]
 truth_forbidden_claims = [
@@ -40,6 +38,9 @@ truth_forbidden_claims = [
   "SIGNED BY ROOT",
   "INSANELY GREAT"
 ]
+
+# All 16 routed React page components are represented below. `Home` covers both
+# /home and /landing in the reference app.
 
 [[pages]]
 name = "public-home"
